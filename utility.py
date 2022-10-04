@@ -1,11 +1,9 @@
-import asn1
 import base64
-import binascii
 import dns.resolver
 import dns.rdtypes
 import rsa
 
-from pyparsing import OneOrMore, Optional, Suppress
+from pyparsing import Optional, Suppress
 from pyparsing import pyparsing_common, quoted_string, rest_of_line
 
 def split_keypair(value: str):
