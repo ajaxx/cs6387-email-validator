@@ -48,12 +48,15 @@ class DKIM_Validator:
     @cached_property
     def public_key(self):
         assert(self.dkim_.key_type == 'rsa')
+        # Retrieves the public key from DNS
         public_key = get_public_key(self.dkim_.selector, self.dkim_.domain)
         logger.debug(f'retrieving public_key => {public_key}')
         return public_key
 
     @cached_property
     def hash_func(self):
+        # Returns the hash function associated with the named hash algo
+        # rsa-256 and rsa-sha1 supported
         if self.dkim_.hash_algo == 'rsa-sha256':
             logger.debug('hash_func: selecting sha256')
             return lambda x: hashlib.sha256(x).digest()

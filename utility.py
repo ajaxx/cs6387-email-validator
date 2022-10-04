@@ -44,10 +44,5 @@ def test_complete():
     public_key = get_public_key('protonmail3', 'protonmail.com.')
     print(public_key)
 
-def test_decode():
-    public_key_encoded = 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzmFrmvkaVOE10ueeoEOMjotpj67tM+bNAAb/XEDbh/fPoWjbkyzsxR/HbcEh7lfJyrTl4Z+4zsJptSf7P5+d1puFiLsCP8W+Ln5f4lJNdp7cEEss4v0uM8h2cez89PZSuoD26h5cfFnnRdy7d05Ag0XbE/vYLv1kdWHHwK/UxL26GrsKJcTKcNo+Ukx3GnXqhsJJNLy/UUYAIy4w3mRQnxjdE0KC74fQBR/7WwiQb47JbQTDiJaFtihiB3CNd6/hZfi5fsGsoypWXR/uL/LiQcTGgC8gSM4YuSAzwIuUE4P+/23dOA8l81WmLTjKRdh4NWX1dGOPQ6a93nInUkfTmwIDAQAB'
-    public_key_encoded = base64.b64decode(public_key_encoded)
-    print(rsa.PublicKey.load_pkcs1_openssl_der(public_key_encoded))
-
 if __name__ == '__main__':
     test_complete()
