@@ -20,6 +20,10 @@ def parse_args():
     parser = argparse.ArgumentParser (description = 'Email Validator')
     parser.add_argument ('-d', '--debug', dest='debug', action='store_true', help='Enable debugging logs')
     parser.add_argument ('-f', '--file', dest='filename', action='store', required=True, help='Name of the file to parse')
+    parser.add_argument ('--with-dkim', dest='validate_dkim', action='store_true', default=False)
+    parser.add_argument ('--with-spf', dest='validate_spf', action='store_true', default=False)
+    parser.add_argument ('--without-dkim', dest='validate_dkim', action='store_false')
+    parser.add_argument ('--without-spf', dest='validate_spf', action='store_false')
     return parser.parse_args()
 
 def validate_authentication_results(header):
@@ -43,6 +47,7 @@ def validate_email():
     
     logging_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level = logging_level)
+    logger = logging.getLogger(__name__)
 
     with open(args.filename, 'rb') as fh:
         # read the raw message; we need to extract the payload manually because the bytes parser
@@ -64,13 +69,17 @@ def validate_email():
 
     #validate_authentication_results(subheader)
 
-    # Create an SPF_Validator
-    spf_validator = SPF_Validator(message_headers, message_body)
-    spf_validator.validate()
-    
-    # Create a DKIM_Validator
-    dkim_validator = DKIM_Validator(message_headers, message_body)
-    dkim_validator.validate()
+    if args.validate_spf:
+        # Create an SPF_Validator
+        logger.info('Validating SPF information')
+        spf_validator = SPF_Validator(message_headers, message_body)
+        spf_validator.validate()
+
+    if args.validate_dkim:
+        # Create a DKIM_Validator
+        logger.info('Validating DKIM information')
+        dkim_validator = DKIM_Validator(message_headers, message_body)
+        dkim_validator.validate()
 
 if __name__ == '__main__':
     validate_email()

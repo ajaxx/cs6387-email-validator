@@ -4,6 +4,7 @@ import logging
 import base64
 import hashlib
 import rsa
+import rsa.pkcs1
 import dkim_signature
 
 from email.message import EmailMessage
@@ -47,15 +48,29 @@ class DKIM_Validator:
     @cached_property
     def public_key(self):
         assert(self.dkim_.key_type == 'rsa')
-        return get_public_key(self.dkim_.selector, self.dkim_.domain)
+        public_key = get_public_key(self.dkim_.selector, self.dkim_.domain)
+        logger.debug(f'retrieving public_key => {public_key}')
+        return public_key
+
+    @cached_property
+    def hash_func(self):
+        if self.dkim_.hash_algo == 'rsa-sha256':
+            logger.debug('hash_func: selecting sha256')
+            return lambda x: hashlib.sha256(x).digest()
+        elif self.dkim_.hash_algo == 'rsa-sha1':
+            logger.debug('hash_func: selecting sha1')
+            return lambda x: hashlib.sha1(x).digest()
+        else:
+            raise ValueError('invalid hashing function')
 
     @cached_property
     def body_hash(self):
         # verify the message body hash
         message_body = self.canonicalized_body
-        message_hash = hashlib.sha256(message_body).digest()
+        message_hash = self.hash_func(message_body)
         self.body_hash_bytes_ = base64.b64encode(message_hash)
         self.body_hash_ = self.body_hash_bytes_.decode()
+        logger.info(f'body_hash[calculated] => {self.body_hash_}')
         return self.body_hash_
 
     @cached_property
@@ -81,6 +96,7 @@ class DKIM_Validator:
             if header_value is None:
                 continue
 
+            logger.debug(f'add to signed headers: {header_key}:{header_value}')
             signed_headers_set.add(header_key)
             signed_headers.append(f'{header_key}:{header_value}')
 
@@ -89,8 +105,12 @@ class DKIM_Validator:
     def validate(self):
         # Verify that the hash of the canonicalized message body matches the
         # hash value conveyed in the "bh=" tag.
+        logger.info(f'body_hash[received] => {self.dkim_.body_hash}')
         if (self.body_hash != self.dkim_.body_hash):
+            logger.warn(f'DKIM signature verification failed: PERMFAIL (body hash did not verify)' )
             raise ValueError('PERMFAIL (body hash did not verify)')
+
+        logger.info(f'Verified that body_hash[calculated] == body_hash[received]')
 
         # The header fields specified by the "h=" tag, in the order
         # specified in that tag, and canonicalized using the header
@@ -114,7 +134,12 @@ class DKIM_Validator:
         # signature and return PERMFAIL (signature did not verify).
         signature = base64.b64decode(self.dkim_.signature)
 
-        # Use the public key to verify
-        validation_result = rsa.verify(signed_headers, signature, self.public_key)
+        try:
+            # Use the public key to verify
+            validation_result = rsa.verify(signed_headers, signature, self.public_key)
+            logger.debug(f'validation_result = {validation_result}')
 
-        # Otherwise, the signature has correctly verified.
+            # Otherwise, the signature has correctly verified.
+            logger.info('DKIM signature verification succeeded')
+        except rsa.pkcs1.VerificationError as e:
+            logger.warn(f'DKIM signature verification failed: {repr(e)}' )
